@@ -14,7 +14,7 @@ mindmap2: false
 
 # How to use Devise in Rails
 
-1. 在Gemfile中添加```gem devise```最新版本参考文档 [devise]("https://rubygems.org/gems/devise")
+1. 在Gemfile中添加```gem devise```最新版本参考文档 [devise](https://rubygems.org/gems/devise)
 2. 运行```bundle install```
 3. 安装 devise 相关组件 ```rails generate devise:install```
 4. 执行命令```rails g devise:views```，生成 devise 的视图文件
@@ -28,3 +28,6 @@ mindmap2: false
         <%= link_to('Sign In', new_session_path(:user)) %>
       <% end %>
     ```
+7. 为 users 表添加字段时，需要自定义 controller ，这样注册时新加的字段才能保存到数据库。
+[https://gist.github.com/withoutwax/46a05861aa4750384df971b641170407](https://gist.github.com/withoutwax/46a05861aa4750384df971b641170407)
+[https://dev.to/casseylottman/adding-a-field-to-your-sign-up-form-with-devise-10i1](https://dev.to/casseylottman/adding-a-field-to-your-sign-up-form-with-devise-10i1)
