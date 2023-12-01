@@ -70,38 +70,38 @@ email: newkbsky@gmail.com
 navs:
   -
     href: /
-    label: 首页
+    label: Home
 
   -
     href: /categories/
-    label: 分类
+    label: Categories
 
   -
     href: /archives/
-    label: 归档
+    label: Archives
     mobile-hidden: true
 
   -
     href: /open-source/
-    label: 开源
+    label: Open Source
     mobile-hidden: true
 
   -
     href: /fragments/
-    label: 片段
+    label: Fragments
 
   -
     href: /wiki/
-    label: 维基
+    label: Wiki
 
   -
     href: /links/
-    label: 链接
+    label: Links
     mobile-hidden: true
 
   -
     href: /about/
-    label: 关于
+    label: About
 
 # ---------------- #
 #       RSS        #
