@@ -1,6 +1,6 @@
 ---
 layout: post
-title: Python multithreading tips: A better alternative to ```time.sleep``` for pausing!
+title: "Python multithreading tips: A better alternative to ```time.sleep``` for pausing!"
 categories: [python]
 description: The method of waiting in Python multithreading environment
 keywords: python, multithreading, sleep, event
