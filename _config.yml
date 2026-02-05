@@ -1,14 +1,14 @@
 # ---------------- #
 #   Main Configs   #
 # ---------------- #
-baseurl:
-url: 
+baseurl: ""
+url: ""
 date_format: "ordinal"
-title: Sky
+title: Sky's Terminal Blog
 subtitle: "Programmer"
 description: ""
 keywords: 
-timezone: American/Chicago
+timezone: America/Chicago
 encoding: "utf-8"
 # 页面左下角显示的年份
 since: 2023
@@ -53,6 +53,7 @@ compress_html:
   comments: ["<!--", "-->"]
 # 代码高亮风格，支持的 theme 列表见 https://github.com/mzlogin/rouge-themes
 highlight_theme: github
+theme: minimal-mistakes-jekyll
 
 # ---------------- #
 #      Author      #
@@ -121,13 +122,12 @@ quiet: false
 excerpt_separator: "\n\n"
 permalink: /:year/:month/:day/:title/
 plugins:
-    - jekyll-github-metadata
     - rouge
 #     - jekyll-html-pipeline
-    - jekyll-paginate
-    - jekyll-sitemap
-    - jekyll-feed
-    - jemoji
+    # - jekyll-paginate
+    # - jekyll-sitemap
+    # - jekyll-feed
+    # - jemoji
 #     - jekyll-mentions
 collections:
     wiki:
