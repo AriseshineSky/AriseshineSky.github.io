@@ -1,5 +1,4 @@
 ---
-layout: post
 title: 不同程序语言的字符串实现
 categories: [string]
 description: 不同程序语言的字符串实现

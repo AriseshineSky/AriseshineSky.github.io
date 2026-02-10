@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Active Record Connection
 categories: [http]
 description: 

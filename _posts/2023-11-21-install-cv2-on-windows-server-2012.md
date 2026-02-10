@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Before install opencv-python on windows server 2012 
 categories: [python]
 description: deal with errors when install opencv-python on windows

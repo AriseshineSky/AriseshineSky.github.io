@@ -1,5 +1,4 @@
 ---
-layout: post
 title: 如何使用devise
 categories: [ruby]
 description: 在Rails中使用devise实现用户的注册，登陆

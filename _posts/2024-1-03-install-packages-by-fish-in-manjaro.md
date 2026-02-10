@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Init Manjaro
 categories: [fish]
 description: 在 utuntu 上部署 rails 应用

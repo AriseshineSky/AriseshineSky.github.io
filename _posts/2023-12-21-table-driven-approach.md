@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Table-Driven Approach - a more elegant form of if-else or switch-case
 categories: [design-pattern]
 description: Table-Driven Approach

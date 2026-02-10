@@ -54,6 +54,8 @@ compress_html:
 # 代码高亮风格，支持的 theme 列表见 https://github.com/mzlogin/rouge-themes
 highlight_theme: github
 theme: minimal-mistakes-jekyll
+minimal_mistakes_skin: "default" # "air", "aqua", "contrast", "dark", "dirt", "neon", "mint", "plum", "sunrise"
+
 
 # ---------------- #
 #      Author      #
@@ -76,29 +78,6 @@ navs:
   -
     href: /categories/
     label: Categories
-
-  -
-    href: /archives/
-    label: Archives
-    mobile-hidden: true
-
-  -
-    href: /open-source/
-    label: Open Source
-    mobile-hidden: true
-
-  -
-    href: /fragments/
-    label: Fragments
-
-  -
-    href: /wiki/
-    label: Wiki
-
-  -
-    href: /links/
-    label: Links
-    mobile-hidden: true
 
   -
     href: /about/
@@ -129,14 +108,6 @@ plugins:
     # - jekyll-feed
     # - jemoji
 #     - jekyll-mentions
-collections:
-    wiki:
-        output: true
-        permalink: /wiki/:path/
-    fragments:
-        output: true
-        permalink: /fragment/:path/
-
 # ---------------- #
 #      Comments    #
 # ---------------- #
@@ -173,3 +144,20 @@ google:
         sidebar-detail: false
         content_header: false
         content_footer: false
+
+paginate_path: /page:num/
+
+defaults:
+  # _posts
+  - scope:
+      path: ""
+      type: posts
+
+    values:
+      layout: single
+      read_time: true
+      comments: true
+      share: true
+      related: true
+
+include: ["_pages"]

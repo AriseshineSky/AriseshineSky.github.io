@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Upgrade 
 categories: [Android]
 description: G+ and Gideon description
@@ -20,3 +19,4 @@ mindmap2: false
 
 #### 发信地址过滤原则
 1. 标注不发信的账号 + 卖场
+2. 

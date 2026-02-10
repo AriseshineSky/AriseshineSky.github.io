@@ -1,5 +1,4 @@
 ---
-layout: post
 title: "Python multithreading tips: A better alternative to ```time.sleep``` for pausing!"
 categories: [python]
 description: The method of waiting in Python multithreading environment

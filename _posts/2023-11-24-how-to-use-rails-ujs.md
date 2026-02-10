@@ -1,5 +1,4 @@
 ---
-layout: post
 title: UJS in Rails 7
 categories: [string]
 description: Add Rails UJS in rails 7

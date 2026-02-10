@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Standard Directory Layout
 categories: [project]
 description: Standard Directory Layout

@@ -1,5 +1,5 @@
 ---
-layout: default
+layout: home
 class: home
 css: ['pages/index.css']
 comments: false
@@ -32,11 +32,6 @@ comments: false
 								<a href="https://github.com/{{ site.github_username }}" target="_blank">{{ site.github_username }}</a>
 							</span>
 						</div>
-					</div>
-				</div>
-				<div class="column one-third mobile-hidden">
-					<div class="collection-title">
-						{% include sidebar-qrcode.html %}
 					</div>
 				</div>
 			</div>
@@ -98,12 +93,6 @@ comments: false
 				{% endif %}
 				{% endfor %}
 			</ol>
-		</div>
-		<div class="column one-third">
-			{% include sidebar-search.html %}
-			{% include sidebar-categories-cloud.html %}
-			{% include sidebar-ad.html %}
-			{% include sidebar-popular-repo.html %}
 		</div>
 	</div>
 	<div class="pagination text-align">

@@ -1,5 +1,4 @@
 ---
-layout: post
 title: Reconnect
 categories: [http]
 description: 

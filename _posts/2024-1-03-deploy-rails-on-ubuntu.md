@@ -1,5 +1,4 @@
 ---
-layout: post
 title: 部署 Rails 应用
 categories: [rails]
 description: 在 utuntu 上部署 rails 应用
