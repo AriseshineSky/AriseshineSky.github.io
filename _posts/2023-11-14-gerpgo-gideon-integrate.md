@@ -1,6 +1,6 @@
 ---
 title: Upgrade 
-categories: [Android]
+categories: [project]
 description: G+ and Gideon description
 keywords: 
 mermaid: false
