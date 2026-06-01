@@ -17,6 +17,16 @@ description: >-
 
 url: "https://ariseshinesky.github.io"
 
+github:
+  username: AriseshineSky
+
+social:
+  name: Sky Zhao
+  email: newkbsky@gmail.com
+  links:
+    - https://github.com/AriseshineSky
+    - mailto:newkbsky@gmail.com
+
 webmaster_verifications:
   google:
   bing:
