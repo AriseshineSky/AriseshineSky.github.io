@@ -1,0 +1,14 @@
+# The contact options.
+
+- type: github
+  icon: "fab fa-github"
+  url: "https://github.com/AriseshineSky"
+
+- type: email
+  icon: "fas fa-envelope"
+  url: "mailto:newkbsky@gmail.com"
+  noblank: true
+
+- type: rss
+  icon: "fas fa-rss"
+  noblank: true

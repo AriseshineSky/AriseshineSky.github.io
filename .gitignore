@@ -1,12 +1,28 @@
-_site/
-*.sw[po]
-*.~vsd
-\#*\#
-*~
-.DS_Store
-Gemfile.lock
-.vscode/
-.jekyll-metadata
-.\$*.png.bkp
-.\$*.png.dtmp
+# Bundler cache
 .bundle
+vendor
+
+# Jekyll cache
+.jekyll-cache
+.jekyll-metadata
+_site
+
+# RubyGems
+*.gem
+
+# NPM dependencies
+node_modules
+package-lock.json
+
+# IDE configurations
+.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/tasks.json
+
+# Misc
+_sass/vendors
+assets/js/dist
+.DS_Store
+*.sw[po]
