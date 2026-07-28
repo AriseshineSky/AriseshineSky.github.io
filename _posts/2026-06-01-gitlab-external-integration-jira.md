@@ -3,6 +3,7 @@ title: "GitLab 与外部系统交互：以 Jira 集成为例（高内聚、低�
 date: 2026-06-01 10:00:00 +0800
 categories: [GitLab, Architecture, DDD]
 tags: [integrations, jira, bounded-context, hexagonal-architecture, cohesion, coupling, anti-corruption-layer, lib-gitlab]
+mermaid: true
 description: >-
   以 Jira 集成为代表，分析 GitLab 如何通过 Bounded Context、集成插件模型、HTTP 防腐层与 Service 编排，
   实现与外部 Issue Tracker 的高内聚、低耦合交互；并说明 lib/gitlab/ 目录命名与 HttpClient 独立文件的动机。
@@ -40,7 +41,7 @@ flowchart TB
   subgraph core [Integrations Bounded Context]
     IntModel[Integrations::Jira]
     ExtIssue[ExternalIssue]
-    JiraSvc[Jira::Requests::*Service]
+    JiraSvc["Jira::Requests::*Service"]
   end
 
   subgraph acl [防腐层 / 基础设施]
