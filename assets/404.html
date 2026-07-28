@@ -1,0 +1,21 @@
+---
+layout: page
+title: "404: Page not found"
+permalink: /404.html
+---
+
+{% include lang.html %}
+
+<p class="lead">{{ site.data.locales[lang].not_found.statement }}</p>
+
+<p>这篇内容可能已迁移或下线。你可以：</p>
+
+<ul>
+  <li><a href="{{ '/' | relative_url }}">返回首页</a></li>
+  <li><a href="{{ '/archives/' | relative_url }}">浏览全部归档</a></li>
+  <li><a href="{{ '/gitlab-learning/' | relative_url }}">GitLab 学习路径</a></li>
+  <li><a href="{{ '/categories/' | relative_url }}">按分类查看</a></li>
+  <li>使用右上角搜索，查找 GitLab、Rails、Celery 等主题</li>
+</ul>
+
+<p class="text-muted">旧站地址形如 <code>/YYYY/MM/DD/标题/</code> 的文章，现已迁至 <code>/posts/标题/</code>。</p>

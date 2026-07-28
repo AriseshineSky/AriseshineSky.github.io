@@ -1,6 +1,6 @@
 ---
 title: Before install opencv-python on windows server 2012 
-categories: [python]
+categories: [Python]
 description: deal with errors when install opencv-python on windows
 keywords: 
 mermaid: false
