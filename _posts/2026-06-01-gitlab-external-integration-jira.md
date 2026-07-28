@@ -32,26 +32,26 @@ GitLab 与外部系统的交互方式很多（Webhooks 出站、REST/GraphQL 入
 
 ```mermaid
 flowchart TB
-  subgraph driving [驱动侧 / GitLab 核心]
-    MR[MergeRequests::PostMergeService]
-    Close[Issues::CloseService]
-    Ref[引用解析 / Mention]
+  subgraph driving ["驱动侧 / GitLab 核心"]
+    MR["MergeRequests::PostMergeService"]
+    Close["Issues::CloseService"]
+    Ref["引用解析 / Mention"]
   end
 
-  subgraph core [Integrations Bounded Context]
-    IntModel[Integrations::Jira]
-    ExtIssue[ExternalIssue]
+  subgraph core ["Integrations Bounded Context"]
+    IntModel["Integrations::Jira"]
+    ExtIssue["ExternalIssue"]
     JiraSvc["Jira::Requests::*Service"]
   end
 
-  subgraph acl [防腐层 / 基础设施]
-    HttpClient[Gitlab::Jira::HttpClient]
-    IntHttp[Integrations::Clients::HTTP]
-    GitHttp[Gitlab::HTTP]
+  subgraph acl ["防腐层 / 基础设施"]
+    HttpClient["Gitlab::Jira::HttpClient"]
+    IntHttp["Integrations::Clients::HTTP"]
+    GitHttp["Gitlab::HTTP"]
   end
 
-  subgraph external [外部系统]
-    JiraAPI[Jira REST API]
+  subgraph external ["外部系统"]
+    JiraAPI["Jira REST API"]
   end
 
   MR --> Close
