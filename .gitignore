@@ -14,15 +14,28 @@ _site
 node_modules
 package-lock.json
 
-# IDE configurations
+# IDE / language server
 .idea
 .vscode/*
 !.vscode/settings.json
 !.vscode/extensions.json
 !.vscode/tasks.json
+.ruby-lsp/
+
+# Local tooling / browser automation artifacts
+.playwright-mcp/
+playwright-report/
+test-results/
+
+# Env and secrets
+.env
+.env.*
+!.env.example
 
 # Misc
 _sass/vendors
 assets/js/dist
 .DS_Store
 *.sw[po]
+*.log
+*~

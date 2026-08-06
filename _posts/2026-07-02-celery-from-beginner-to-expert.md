@@ -2,7 +2,7 @@
 title: "Celery 从入门到精通：以 em-celery 生产项目为例"
 date: 2026-07-02 10:00:00 +0800
 categories: [Python, DevOps]
-tags: [celery, redis, distributed-tasks, em-celery, sp-api]
+tags: [celery, kombu, redis, distributed-tasks, em-celery, sp-api]
 description: >-
   从 Celery 基础概念到生产级实践，结合 em-celery 真实项目讲解任务定义、发送、消费、队列路由、限流、错误重试与 VPS 部署，并给出兼容升级的演进路径。
 mermaid: true
@@ -19,6 +19,7 @@ mermaid: true
 5. [定义任务](#5-定义任务)
 6. [发送任务](#6-发送任务)
 7. [消费任务（Worker）](#7-消费任务worker)
+   - [7.4 Worker 预取机制（Prefetch）](#74-worker-预取机制prefetch)
 8. [队列与路由](#8-队列与路由)
 9. [配置详解](#9-配置详解)
 10. [错误处理与重试](#10-错误处理与重试)
@@ -74,6 +75,61 @@ flowchart LR
 | **Broker** | 存储待执行消息 | Redis `redis://host:6379/2` |
 | **Worker** | 从队列取消息并执行 | Google VPS 上的 `celery worker` |
 | **Result Backend** | 存储任务返回值 | 未使用（`task_ignore_result = True`） |
+
+### 2.1 Celery 与 Kombu：职责分层
+
+从架构角度看，Celery 的一个优点就是**职责划分比较清晰**。上面表格描述的是「任务系统」视角；若再往下拆一层，会看到 Celery 本身并不直接操作 Redis 或 RabbitMQ，而是建立在 [Kombu](https://kombu.readthedocs.io/) 之上：
+
+| 组件 | 职责 |
+|------|------|
+| **Celery** | Task、Worker、Beat、Canvas、Retry、Result Backend 等任务框架 |
+| **Kombu** | 消息抽象层（Message、Queue、Exchange、Producer、Consumer） |
+| **py-amqp** | AMQP 协议实现（RabbitMQ） |
+| **redis-py** | Redis 客户端 |
+| **RabbitMQ / Redis** | 真正的消息 Broker |
+
+也就是说：
+
+- **Celery** 是建立在 **Kombu** 之上的任务框架
+- **Kombu** 是建立在各种消息协议和 Broker 之上的消息抽象层
+
+```mermaid
+flowchart TB
+    subgraph celery_layer [Celery 任务框架]
+        Task[Task / Worker / Beat]
+        Retry[Retry / Canvas]
+        Backend[Result Backend]
+    end
+    subgraph kombu_layer [Kombu 消息抽象层]
+        Conn[Connection]
+        Prod[Producer]
+        Cons[Consumer]
+        ExQ[Exchange / Queue / Channel]
+        Transport[Transport]
+    end
+    subgraph driver_layer [协议与 Broker]
+        PyAmqp[py-amqp]
+        RedisPy[redis-py]
+        Broker[(RabbitMQ / Redis)]
+    end
+    celery_layer --> kombu_layer
+    kombu_layer --> driver_layer
+    PyAmqp --> Broker
+    RedisPy --> Broker
+```
+
+**为什么要了解 Kombu？**
+
+读 Celery 源码、或设计可扩展的任务系统时，不要只盯 Celery 本身，也建议花些时间看 Kombu。很多 Celery 里看似「框架内部」的对象，其实直接来自 Kombu：
+
+| 对象 | 来源 |
+|------|------|
+| `Connection` | Kombu |
+| `Producer` / `Consumer` | Kombu |
+| `Exchange` / `Queue` | Kombu |
+| `Channel` / `Transport` | Kombu |
+
+理解 Kombu 之后，再回头看 Celery 的**消息发送**、**任务路由**和 **Worker 通信**，会轻松很多。em-celery 发送端已经用到了这一层——`apply_async(..., connection=Connection(broker_url))` 里的 `Connection` 就是 Kombu 提供的 Broker 连接抽象，而不是 Celery 自造的 API（详见 [第 6 节](#6-发送任务)）。
 
 ---
 
@@ -248,6 +304,8 @@ em-celery 的发送端全部是独立 CLI 脚本，**不依赖 Worker 本地配�
 
 ### 6.1 基本模式
 
+发送端通过 **Kombu** 的 `Connection` 建立与 Broker 的连接（见 [2.1 节](#21-celery-与-kombu职责分层)），再交给 Celery 的 `apply_async` 入队：
+
 ```python
 from kombu import Connection
 from em_celery.tasks.spapi_update_item_offers_task import spapi_update_item_offers
@@ -267,7 +325,7 @@ spapi_update_item_offers.apply_async(
 
 - `args`：任务位置参数，必须与 `@app.task` 函数签名一致
 - `queue`：目标队列名，Worker 按 `-Q` 订阅
-- `connection`：显式 Broker 连接，发送端与 Worker 可不在同一环境
+- `connection`：显式 Broker 连接（Kombu `Connection`），发送端与 Worker 可不在同一环境
 
 ### 6.2 发送前过滤（TTL）
 
@@ -408,6 +466,172 @@ Restart=always
 [Install]
 WantedBy=multi-user.target
 ```
+
+### 7.4 Worker 预取机制（Prefetch）
+
+#### 7.4.1 什么是预取
+
+**预取（prefetch）** 指 Worker **提前从 Broker 拉取多条消息，缓存在本地**，而不是「执行完一条再去取下一条」。
+
+动机很直接：Broker 在网络另一端，每取一条消息都往返一次有延迟。预取让 Worker 手里始终握着若干条待执行任务，当前任务跑完可以立刻从本地缓冲取下一条，减少空等。
+
+Celery 用 `worker_prefetch_multiplier` 控制预取倍数：
+
+```python
+# 每个 Worker 子进程最多「占住」的消息条数
+worker_prefetch_multiplier = 4  # Celery 默认值
+```
+
+在 **prefork** 池（`celery worker` 默认）下，每个子进程各自维护预取计数。粗略理解：
+
+| 配置 | 含义 |
+|------|------|
+| `worker_prefetch_multiplier = 4` | 每个子进程最多从 Broker **预订** 4 条消息 |
+| `--concurrency = 4` | 4 个子进程并行执行 |
+| 合计在途消息（上限） | `4 × 4 = 16` 条已被某 Worker 取走、尚未 ack 的消息 |
+
+消息一旦被 Worker **预订（reserve）**，就从 Broker 的队列里移出，进入该 Worker 进程的本地缓冲；在任务完成并 ack 之前，**其他 Worker 看不到这条消息**。
+
+```mermaid
+sequenceDiagram
+    participant B as Broker 队列
+    participant W as Worker 子进程
+  Note over W: prefetch_multiplier=4
+    W->>B: 拉取消息（最多 4 条）
+    B-->>W: M1, M2, M3, M4 进入本地缓冲
+    W->>W: 执行 M1
+    W->>W: 执行 M2
+    Note over B: 此时新入队的高优先级消息<br/>在 Broker 上等待
+    W->>W: 执行 M3 …
+```
+
+#### 7.4.2 与 `task_acks_late` 的关系
+
+em-celery 使用 `task_acks_late = True`：任务**执行成功后才向 Broker 确认（ack）**。
+
+| 阶段 | Broker 视角 | Worker 视角 |
+|------|-------------|-------------|
+| 预取 / reserve | 消息已离开队列（Redis 里已从 list pop 出） | 消息在本地待执行 |
+| 执行中 | 若 Worker 崩溃且 `reject_on_worker_lost=True`，可重新入队 | 正在跑业务逻辑 |
+| ack 后 | 彻底消费完毕 | 本地缓冲减一，可再预取下一条 |
+
+因此 **预取 + 延迟 ack** 的组合意味着：消息一旦被预取，在任务跑完之前既不会被别的 Worker 抢走，也**不会参与 Broker 侧的优先级排序**——它已经在某个 Worker 的口袋里了。
+
+#### 7.4.3 Redis 优先级队列与 BRPOP
+
+Redis **没有** AMQP 那样的原生优先级队列。Celery 通过 Kombu 的 **Transport 模拟**：把一个逻辑队列拆成 **10 个 Redis List**：
+
+| Redis Key | Broker 优先级 | 说明 |
+|-----------|---------------|------|
+| `SpapiItemOffersUpdate_US` | 0（最高） | 主队列名，无后缀 |
+| `SpapiItemOffersUpdate_US:1` | 1 | |
+| … | … | |
+| `SpapiItemOffersUpdate_US:9` | 9（最低） | |
+
+发送时通过 `apply_async(..., priority=N)` 写入对应子列表。Worker 消费时用 **`BRPOP key1 key2 … keyN`**（阻塞式从多个 list 右侧弹出）：**key 从左到右排列，先检查高优先级 list**；只有前面的 list 为空时，才会落到后面的低优先级 list。
+
+```python
+# em_workers/worker/settings.py（节选）
+broker_transport_options = {
+    'priority_steps': list(range(10)),  # 0..9 共 10 档
+    'sep': ':',                         # 子队列后缀分隔符
+    'queue_order_strategy': 'priority', # BRPOP 按优先级顺序轮询
+}
+```
+
+```mermaid
+flowchart LR
+    subgraph redis_lists [Redis Lists 同一逻辑队列]
+        Q0["SpapiItemOffersUpdate_US<br/>prio 0"]
+        Q1[":1"]
+        Q9[":9"]
+    end
+    W[Worker BRPOP] --> Q0
+    W -.->|仅当 Q0 空| Q1
+    W -.->|依次| Q9
+```
+
+**要点**：优先级体现在 **每次从 Broker 取消息的那一刻**——BRPOP 总是先看高优先级子队列。一旦消息被取进 Worker 本地缓冲，后续再入队的紧急任务只能排队等前面预取的任务跑完。
+
+#### 7.4.4 为什么优先级队列必须 `worker_prefetch_multiplier = 1`
+
+若 `worker_prefetch_multiplier > 1`，单个 Worker 子进程会**一次性预订多条**消息。典型坏场景：
+
+1. 时刻 T0：高优先级子队列暂时为空，低优先级 `:9` 里有大量积压。
+2. Worker 预取 4 条，从 `:9` 弹出 M1–M4 到本地缓冲。
+3. 时刻 T1：运维手工发送 `-p 9` 紧急任务，进入主队列（prio 0）。
+4. Worker 仍在执行 M1–M4，**不会再次 BRPOP**，紧急任务在 Broker 上干等。
+
+若 `worker_prefetch_multiplier = 1`：
+
+- 每个子进程手里**最多 1 条**未完成任务；
+- 每完成一条就重新 `BRPOP`，**立即感知**当前各优先级子队列的最新状态；
+- 紧急任务入队后，最多等待「每个并发进程正在跑的那 1 条」结束，而不会被一批低优先级预取挡住。
+
+```python
+# 使用 Redis 优先级时推荐配置
+worker_prefetch_multiplier = 1
+task_acks_late = True
+```
+
+| `prefetch_multiplier` | 优先级语义 | 吞吐 |
+|---------------------|------------|------|
+| `1` | 正确：每次取消息都按 BRPOP 顺序 | 略低（更频繁访问 Broker） |
+| `4`（默认） | **被打乱**：本地缓冲中的低优先级任务阻塞高优先级 | 略高 |
+
+**并发与吞吐**：`prefetch=1` 并不等于单线程。`--concurrency=4` 时仍有 4 个子进程各自预取 1 条，合计 4 条并行；只是**每个进程**不会在本地囤积一批任务。
+
+#### 7.4.5 不同 Broker 下的差异（简述）
+
+| Broker | 预取实现 | 优先级 |
+|--------|----------|--------|
+| **RabbitMQ (AMQP)** | `basic_qos(prefetch_count=N)`，Broker 端限制未 ack 投递数 | 原生 `x-max-priority`；同样建议 prefetch=1 才能保证严格优先级 |
+| **Redis** | 客户端循环 `BRPOP` / `LPOP` 填满本地缓冲 | Kombu 多 list 模拟；**必须** prefetch=1 |
+| **SQS 等** | 可见性超时 + 长轮询 | 通常无细粒度优先级，预取语义也不同 |
+
+Celery 官方文档对优先级队列的说明一致：**若启用 priority，应将 `worker_prefetch_multiplier` 设为 1**。
+
+#### 7.4.6 如何验证
+
+```bash
+# 1. 先堆低优先级
+redis-cli -n 2 LPUSH SpapiItemOffersUpdate_US:9 '{"body": "bulk"}'
+
+# 2. 启动 Worker（确认 prefetch=1）
+celery -A em_celery.worker worker -Q SpapiItemOffersUpdate_US --concurrency=1 --loglevel=info
+
+# 3. 再入队高优先级（主队列名，无后缀）
+redis-cli -n 2 LPUSH SpapiItemOffersUpdate_US '{"body": "urgent"}'
+
+# prefetch=1：下一条 BRPOP 应先弹出 urgent
+# prefetch=4 且本地已有 bulk：urgent 需等本地缓冲清空
+```
+
+查看当前预取与预留任务：
+
+```bash
+celery -A em_celery.worker inspect reserved   # 已预取、尚未执行完
+celery -A em_celery.worker inspect active     # 正在执行
+```
+
+#### 7.4.7 em-celery / em-workers 中的配置
+
+```python
+# em_workers/worker/settings.py
+task_acks_late = True
+task_reject_on_worker_lost = True
+task_default_priority = 4          # broker 侧；用户 API 默认 5 经转换后为此值
+task_queue_max_priority = 9
+
+broker_transport_options = {
+    'priority_steps': list(range(10)),
+    'sep': ':',
+    'queue_order_strategy': 'priority',
+}
+worker_prefetch_multiplier = 1     # Redis 优先级队列：不可改为 4
+```
+
+发送端使用 `dispatch_task(..., priority=9)` 时，用户优先级 9（最高）会映射为 broker 优先级 0，写入无后缀的主队列 list；Worker 侧 BRPOP 会优先消费。
 
 ---
 
@@ -762,6 +986,8 @@ Sentry 捕获不可重试异常，配置在 `config.ini` 的 `[sentry]` 段。
 
 6. **task_ignore_result=True 时用 result.get()**：结果不会存储，调用会阻塞或超时。
 
+7. **启用优先级却保留默认 prefetch=4**：低优先级任务被预取进本地缓冲后，高优先级消息无法插队。Redis 模拟优先级时必须 `worker_prefetch_multiplier = 1`（见 [7.4 节](#74-worker-预取机制prefetch)）。
+
 ### 15.2 最佳实践
 
 1. **薄包装 + 厚业务**：Celery 层只做调度，业务逻辑放独立包。
@@ -779,6 +1005,8 @@ Sentry 捕获不可重试异常，配置在 `config.ini` 的 `[sentry]` 段。
 7. **版本锁定**：`em_celery` 与 `em_tasks` 版本写入部署文档，升级时先灰度一个 marketplace。
 
 8. **监控队列深度**：`redis.llen` 或 Celery Flower，设置告警阈值。
+
+9. **Redis 优先级 + prefetch=1**：需要严格优先级时，不要为提高吞吐把 `worker_prefetch_multiplier` 调大；用 `--concurrency` 水平扩展。
 
 ---
 
