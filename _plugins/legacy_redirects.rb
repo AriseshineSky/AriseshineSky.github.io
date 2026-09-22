@@ -72,6 +72,7 @@ module Jekyll
       generate_deleted_post_redirects(site)
       generate_pagination_redirects(site)
       generate_static_redirects(site)
+      generate_legacy_collection_redirects(site)
     end
 
     private
@@ -121,6 +122,34 @@ module Jekyll
           site.pages << LegacyRedirectPage.new(site, path, target)
         end
       end
+    end
+
+    # Redirect the pre-Chirpy "_wiki" and "_fragments" collections to /archives/.
+    #
+    # Those collections were dropped during the theme migration, so every
+    # /wiki/<slug>/ and /fragments/<slug>/ URL (and its no-trailing-slash
+    # variant, which GitHub Pages resolves to the index.html below) was
+    # returning 404 and flooding GA with 404 noise.
+    #
+    # Slugs are listed in _data/legacy_wiki.yml (generated from git history).
+    def generate_legacy_collection_redirects(site)
+      legacy = site.data["legacy_wiki"]
+      return unless legacy.is_a?(Hash)
+
+      (%w[wiki fragments] & legacy.keys).each do |collection|
+        slugs = legacy[collection]
+        next unless slugs.is_a?(Array)
+
+        slugs.each do |slug|
+          next if slug.to_s.empty? || slug.to_s == "template"
+
+          site.pages << LegacyRedirectPage.new(site, "#{collection}/#{slug}", "/archives/")
+        end
+      end
+
+      # The collection index pages themselves (/fragments, and bare /wiki is
+      # already handled via STATIC_REDIRECTS).
+      site.pages << LegacyRedirectPage.new(site, "fragments", "/archives/") if legacy["fragments"]
     end
 
     def add_dated_redirects(site, year, month, day, slug, target_url)
